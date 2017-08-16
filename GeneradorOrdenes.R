@@ -52,7 +52,8 @@ fliquidacion <- sapply(fondo,liquidacion)
 
 #### Creacion de los documentos
 zero <- as.character(integer(length(fondo)))
-documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",importe,"|",fcaptura,"|",precio,"|",zero))
+documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",fcaptura,"|",precio,"|",zero))
 #write.table(documento,"file.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "file.txt")
+
