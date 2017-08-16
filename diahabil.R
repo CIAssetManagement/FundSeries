@@ -1,15 +1,3 @@
-diahabil <- function(fecha){
-  if(fecha == "sábado"){
-    return("inahbil")
-  }
-  if(fecha == "domingo"){
-    return("inhabil")
-  }
-  else{
-    return("habil")
-  }
-}
-
 diainhabil <-  function(fecha){
   fechabase0 <- as.Date("2017-08-06")
   fechabase1 <- as.Date("2017-08-07")

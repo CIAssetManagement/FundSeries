@@ -37,33 +37,28 @@ titulos <- as.character(archivo$Monto%/%precio)
 #Importe de la operacion
 importe <- as.character(as.numeric(titulos)*precio)
 
-#Fecha de captura
-fcaptura <- format(Sys.Date(), "%d/%m/%Y")
+#Fecha de Operacion
+foperacion <- format(Sys.Date()-5, "%d/%m/%Y")
 
 #Fecha de liquidacion (en días)
 liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,2,2,2,2,3,3))
 liquidacion <- function(valor){
   vector <- match(valor,liq)
   fliq <- liq[vector,2]
-  fechas <- Sys.Date()+as.numeric(fliq)
+  fechas <- Sys.Date()-5+as.numeric(fliq)
   fechas <- lapply(fechas,diainhabil)
   fechas <- do.call("c",fechas)
   fliquidacion <- format(fechas,"%d/%m/%Y")
   return(fliquidacion)
 }
-fliquidacion <- sapply(fondo,liquidacion)
 
-#Fecha de Operacion
-dhabil <- diahabil(weekdays(Sys.Date()-1))
-if(dhabil == "habil"){
-  foperacion <- format(Sys.Date()-1, "%d/%m/%Y")
-}else{
-  foperacion <- format(Sys.Date()-3, "%d/%m/%Y")
-}
+#Fecha de Captura
+numero <- ifelse(fondo=="+CIGUB",-1,0)
+fcaptura <- format(Sys.Date()+-5+numero, "%d/%m/%Y")
 
 #### Creacion de los documentos
 zero <- as.character(integer(length(fondo)))
-documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",fcaptura,"|",precio,"|",zero))
+documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
 #write.table(documento,"file.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "file.txt")
