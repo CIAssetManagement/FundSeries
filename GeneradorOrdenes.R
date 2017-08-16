@@ -8,7 +8,7 @@ archivo <- read.csv("OrdenPrueba1.csv",stringsAsFactors = FALSE)
 
 #Tipo de operacion
 operacion <- as.character(archivo$Operacion)
-operacion <- ifelse(operacion == "Compra","CPA.SI",ifelse(operacion == "Venta","VTA.SI","Error"))
+operacion <- ifelse(operacion == "Compra","CPA-SI",ifelse(operacion == "Venta","VTA-SI","Error"))
 
 #Contratos de la operación
 contratos <- as.character(archivo$Contrato)
@@ -17,7 +17,7 @@ contratos <- as.character(archivo$Contrato)
 fondo <- paste0("+",archivo$Fondo)
 
 #Precio
-pri <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLSA"),c(1.682033,1.919831,1.099947,1.099757,1.450861,1.056628,2.392346))
+pri <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(1.682033,1.919831,1.099947,1.099757,1.450861,1.056628,2.392346))
 prices <- function(valor){
   vector <- match(valor,pri)
   price <- pri[vector,2]
@@ -41,14 +41,25 @@ importe <- as.character(as.numeric(titulos)*precio)
 fcaptura <- format(Sys.Date(), "%d/%m/%Y")
 
 #Fecha de liquidacion (en días)
-liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLSA"),c(0,2,2,2,2,3,3))
+liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,2,2,2,2,3,3))
 liquidacion <- function(valor){
   vector <- match(valor,liq)
   fliq <- liq[vector,2]
-  fliquidacion <- format(Sys.Date()+as.numeric(fliq),"%d/%m/%Y")
+  fechas <- Sys.Date()+as.numeric(fliq)
+  fechas <- lapply(fechas,diainhabil)
+  fechas <- do.call("c",fechas)
+  fliquidacion <- format(fechas,"%d/%m/%Y")
   return(fliquidacion)
 }
 fliquidacion <- sapply(fondo,liquidacion)
+
+#Fecha de Operacion
+dhabil <- diahabil(weekdays(Sys.Date()-1))
+if(dhabil == "habil"){
+  foperacion <- format(Sys.Date()-1, "%d/%m/%Y")
+}else{
+  foperacion <- format(Sys.Date()-3, "%d/%m/%Y")
+}
 
 #### Creacion de los documentos
 zero <- as.character(integer(length(fondo)))
