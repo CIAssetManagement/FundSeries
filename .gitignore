@@ -35,3 +35,4 @@ vignettes/*.pdf
 #Local files
 OrdenPrueba.csv
 file.txt
+.Rproj.user

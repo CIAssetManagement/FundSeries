@@ -2,8 +2,8 @@
 
 #Paquete
 #Directorio de trabajo
-setwd("C:/Github/OrdenesGlobales")
-archivo <- read.csv("OrdenPrueba.csv",stringsAsFactors = FALSE)
+setwd("C:/Github/FundSeries")
+archivo <- read.csv("OrdenPrueba1.csv",stringsAsFactors = FALSE)
 #### Creacion de los datos
 
 #Tipo de operacion
@@ -17,12 +17,11 @@ contratos <- as.character(archivo$Contrato)
 fondo <- paste0("+",archivo$Fondo)
 
 #Precio
-pri <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLSA"),c(1,1.1,1.2,1.3,1.4,1.5,1.6))
+pri <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLSA"),c(1.682033,1.919831,1.099947,1.099757,1.450861,1.056628,2.392346))
 prices <- function(valor){
   vector <- match(valor,pri)
   price <- pri[vector,2]
-  vprice <- format(Sys.Date()+as.numeric(price),"%d/%m/%Y")
-  return(vprice)
+  return(as.numeric(price))
 }
 precio <- sapply(fondo,prices)
 
