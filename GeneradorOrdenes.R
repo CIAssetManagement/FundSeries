@@ -53,7 +53,7 @@ liquidacion <- function(valor){
 }
 
 #Fecha de Captura
-numero <- ifelse(fondo=="+CIGUB",-1,0)
+numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
 fcaptura <- format(Sys.Date()+-5+numero, "%d/%m/%Y")
 
 #### Creacion de los documentos
