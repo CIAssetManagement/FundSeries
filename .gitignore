@@ -33,6 +33,8 @@ vignettes/*.pdf
 *.knit.md
 
 #Local files
-OrdenPrueba.csv
+OrdenPrueba.xls
+NuevasPosiciones.csv
+OrdenPrueba1.csv
 file.txt
 .Rproj.user

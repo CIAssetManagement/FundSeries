@@ -1,20 +1,24 @@
 #Archivo para la realizacion de las órdenes globales
 
 #Paquete
+library(readxl)
+library(dplyr)
 #Directorio de trabajo
 setwd("C:/Github/FundSeries")
-archivo <- read.csv("OrdenPrueba1.csv",stringsAsFactors = FALSE)
-#### Creacion de los datos
+archivo <- read_excel("OrdenPrueba.xls")
 
-#Tipo de operacion
-operacion <- as.character(archivo$Operacion)
-operacion <- ifelse(operacion == "Compra","CPA-SI",ifelse(operacion == "Venta","VTA-SI","Error"))
+#######################################################
+#### Creacion de los datos
+#######################################################
 
 #Contratos de la operación
-contratos <- as.character(archivo$Contrato)
+contratos <- as.character(archivo$CContrato)
+
+#Tipo de operacion
+operacion <- rep("CPA-SI",length(contratos))
 
 #Fondo
-fondo <- paste0("+",archivo$Fondo)
+fondo <- as.character(paste0("'",archivo$Emisora))
 
 #Precio
 pri <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(1.682033,1.919831,1.099947,1.099757,1.450861,1.056628,2.392346))
@@ -26,13 +30,15 @@ prices <- function(valor){
 precio <- sapply(fondo,prices)
 
 #Serie
-serie <- as.character(archivo$Serie)
+antserie <- as.character(archivo$Serie)
+newserie <- as.character(sapply(archivo$Importe,serie))
+vender <- ifelse(antserie==newserie,"No vender","Vender")
 
 #Tipo de valor
-tipo <- as.character(archivo$Tipo.de.Valor)
+tipo <- ifelse(fondo=="+CIEQUS",52,ifelse(fondo=="+CIBOLS",52,51))
 
 #Cantidad de títulos
-titulos <- as.character(archivo$Monto%/%precio)
+titulos <- as.character(archivo$Importe%/%precio)
 
 #Importe de la operacion
 importe <- as.character(as.numeric(titulos)*precio)
@@ -56,9 +62,15 @@ liquidacion <- function(valor){
 numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
 fcaptura <- format(Sys.Date()+-5+numero, "%d/%m/%Y")
 
-#### Creacion de los documentos
+#### Creación del documento csv
+document <- data.frame(cbind(contratos,fondo,archivo$Importe,antserie,newserie,tipo))
+colnames(document) <- c("Contrato","Fondo","Monto","Serie Anterior","Nueva Serie","Tipo")
+write.csv(document,"NuevasPosiciones.csv",col.names=TRUE)
+
+#### Creacion del documento txt
 zero <- as.character(integer(length(fondo)))
 documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
+documento <- documento[vender=="Vender"]
 #write.table(documento,"file.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "file.txt")
