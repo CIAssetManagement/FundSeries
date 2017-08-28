@@ -10,5 +10,5 @@ serie <- function(monto){
   if(between(monto,montos[3],montos[2])){return(series[3])}
   if(between(monto,montos[4],montos[3])){return(series[4])}
   if(between(monto,montos[5],montos[4])){return(series[5])}
-  if(monto < montos[5]){series[5]}
+  #if(monto < montos[5]){series[5]}
 }
