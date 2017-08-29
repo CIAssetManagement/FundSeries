@@ -1,6 +1,6 @@
 ###########################################################################################################
 #
-#   Paso 1, Verificaci髇 de la serie
+#   Paso 1, Verificaci贸n de la serie
 #
 ###########################################################################################################
 
@@ -12,7 +12,7 @@ setwd("C:/Github/FundSeries")
 archivo <- read_excel("OrdenPrueba.xls")
 
 
-#Contratos de la operaci髇
+#Contratos de la operaci贸n
 contratos <- as.character(archivo$CContrato)
 
 #Fondo
@@ -24,9 +24,9 @@ antserie <- as.character(gsub(".*_", "", archivo$Serie))
 newserie <- as.character(sapply(archivo$Importe,serie))
 vender <- ifelse(antserie==newserie,"No vender","Vender")
 
-#### Creaci髇 del documento csv
+#### Creaci贸n del documento csv
 document <- data.frame(cbind(contratos,fondo1,archivo$Importe,antserie,newserie,vender))
-colnames(document) <- c("Contrato","Fondo","Monto","Serie Anterior","Nueva Serie","Acci髇 a realizar")
+colnames(document) <- c("Contrato","Fondo","Monto","Serie Anterior","Nueva Serie","Acci贸n a realizar")
 write.csv(document,"NuevasPosiciones.csv",col.names=TRUE)
 
 
@@ -41,7 +41,7 @@ write.csv(document,"NuevasPosiciones.csv",col.names=TRUE)
 operacion <- rep("VTA-SI",length(contratos))
 
 #Serie de la venta
-serie1 <- antserie
+serie1 <- gsub("'","",antserie)
 
 #Precio
 precios <- read.csv("Precios.csv",header = TRUE)
@@ -57,16 +57,17 @@ precio <- mapply(prices,fondo,serie1)
 #Tipo de valor
 tipo <- ifelse(fondo=="+CIEQUS",52,ifelse(fondo=="+CIBOLS",52,51))
 
-#T韙ulos
-titulos <- as.character(archivo$T韙ulos)
+#T铆tulos
+titulos <- as.character(archivo$T铆tulos)
 
 #Importe de la operacion
-importe <- as.character(as.numeric(titulos)*precio)
+importe1 <- as.numeric(titulos)*precio
+importe <- as.character(importe1)
 
 #Fecha de Operacion
 foperacion <- format(Sys.Date(), "%d/%m/%Y")
 
-#Fecha de liquidacion (en d韆s)
+#Fecha de liquidacion (en d铆as)
 liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,2,2,2,2,3,3))
 liquidacion <- function(valor){
   vector <- match(valor,liq)
@@ -100,13 +101,19 @@ cat(paste(x, collapse = "\n"), file = "venta.txt")
 ###########################################################################################################
 
 #Tipo de operacion
-operacion <- rep("CPA-SI",length(contratos))
+operacion <- rep("Compra Sociedades Inversio",length(contratos))
 
 #Serie
 serie2 <- newserie
 
-#T韙ulos
-titulos <- as.character(archivo$Importe%/%precio)
+#Precio
+precio <- mapply(prices,fondo,serie2)
+
+#T铆tulos
+titulos <- as.character(importe1%/%precio)
+
+#Importe
+importe <- as.character(precio*as.numeric(titulos))
 
 #### Creacion del documento txt
 zero <- as.character(integer(length(fondo)))
