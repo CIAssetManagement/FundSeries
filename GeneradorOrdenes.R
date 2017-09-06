@@ -20,8 +20,13 @@ fondo <- as.character(archivo$Emisora)
 fondo1 <- paste0("'",fondo)
 
 #Serie
-antserie <- as.character(gsub(".*_", "", archivo$Serie))
+antserie <- as.character(gsub("'", "", archivo$Serie))
+#Operacion normal
 newserie <- as.character(sapply(archivo$Importe,serie))
+
+#Operacion CIPLUS
+#newserie <- as.character(sapply(archivo$Importe,seriep))
+
 vender <- ifelse(antserie==newserie,"No vender","Vender")
 
 #### Creación del documento csv
@@ -68,7 +73,7 @@ importe <- as.character(importe1)
 foperacion <- format(Sys.Date(), "%d/%m/%Y")
 
 #Fecha de liquidacion (en días)
-liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,2,2,2,2,3,3))
+liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,0,2,2,2,3,3))
 liquidacion <- function(valor){
   vector <- match(valor,liq)
   fliq <- liq[vector,2]
@@ -81,8 +86,8 @@ liquidacion <- function(valor){
 fliquidacion <- liquidacion(fondo)
 
 #Fecha de Captura
-numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
-fcaptura <- format(Sys.Date()+numero, "%d/%m/%Y")
+#numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
+fcaptura <- format(Sys.Date(), "%d/%m/%Y")
 
 #### Creacion del documento txt
 zero <- as.character(integer(length(fondo)))
@@ -122,3 +127,4 @@ documento <- documento[vender=="Vender"]
 #write.table(documento,"compra.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "compra.txt")
+

@@ -12,3 +12,14 @@ serie <- function(monto){
   if(between(monto,montos[5],montos[4])){return(series[5])}
   if(monto < montos[5]){return(series[5])}
 }
+
+seriep <- function(monto){
+  #Series that investors can achieve
+  series <- c("BF-2","BF-5","BF-7")
+  #Minimum money required per series
+  montos <- c(500000,100000)
+  
+  if(monto >= montos[1]){return(series[1])}
+  if(between(monto,montos[2],montos[1])){return(series[2])}
+  if(monto < montos[2]){return(series[3])}
+}
