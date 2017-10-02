@@ -10,43 +10,80 @@ library(dplyr)
 #Directorio de trabajo
 setwd("C:/Github/FundSeries")
 archivo <- read_excel("OrdenPrueba.xls")
+archivo$Serie <- gsub("'","",archivo$Serie)
 
+####################################################################################################
+#                                      Fondos a Reclasificar                                       #
+####################################################################################################
 
-#Contratos de la operación
-contratos <- as.character(archivo$CContrato)
+#En caso de hacerse la reclasificación de CIBOLS y CIEQUS.
+#fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','CIEQUS','+CIBOLS')
+#En caso de no hacerse la reclasificación de CIBOLS y CIEQUS.
+fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD')
 
-#Fondo
-fondo <- as.character(archivo$Emisora)
-fondo1 <- paste0("'",fondo)
+####################################################################################################
+#                                 Data frame con las viejas series                                 #
+####################################################################################################
 
-#Serie
-antserie <- as.character(gsub("'", "", archivo$Serie))
-#Operacion normal
-newserie <- as.character(sapply(archivo$Importe,serie))
+datosventa <- archivo %>%
+  filter(Emisora %in% fondos & Importe > 0 & Serie != 'BE-0') %>%
+  group_by(CContrato, Emisora, Serie) %>%
+  summarise(Titulos = sum(Títulos), Importe = sum(Importe))
 
-#Operacion CIPLUS
-#newserie <- as.character(sapply(archivo$Importe,seriep))
+####################################################################################################
+#                                 Data frame con las nuevas series                                 #
+####################################################################################################
 
-vender <- ifelse(antserie==newserie,"No vender","Vender")
+datoscompra <- archivo %>% 
+  filter(Emisora %in% fondos & Importe > 0 & Serie != 'BE-0') %>%
+  group_by(CContrato, Emisora) %>%
+  summarise(Titulos = sum(Títulos), Importe = sum(Importe))
+
+#Serie nueva 
+#Esto sirve en el caso que existan CIPLUS BF's
+#serie <- ifelse(datoscompra$Emisora == '+CIPLUS',
+#                sapply(datoscompra$Importe,seriep),
+#                sapply(datoscompra$Importe,serie))
+
+#Este es el caso sin CIPLUSes
+serie <- as.character(sapply(datoscompra$Importe,serie))
+
+#Data frame completo
+datoscompra$Serie <- serie
+
+####################################################################################################
+#                                         Reclasificacion                                          #
+####################################################################################################
+
+datos <- merge(datosventa,datoscompra,by.x = c('CContrato','Emisora'),by.y = c('CContrato','Emisora'))
+ventas <- ifelse(datos$Serie.x == datos$Serie.y, "No Reclasificar","Reclasificar")
+datos$Venta <- ventas
+datos <- datos %>% filter(Venta == 'Reclasificar')
+datos$Titulos.y <- NULL
+datos$Importe.y <- NULL
+colnames(datos) <- c('Contrato','Fondo','SerieAnterior','Titulos','Importe','SerieNueva','Accion a realizar')
 
 #### Creación del documento csv
-document <- data.frame(cbind(contratos,fondo1,archivo$Importe,antserie,newserie,vender))
-colnames(document) <- c("Contrato","Fondo","Monto","Serie Anterior","Nueva Serie","Acción a realizar")
-write.csv(document,"NuevasPosiciones.csv",col.names=TRUE)
-
-
+datos1 <- datos
+datos1$Fondo <- paste0("'",datos1$Fondo)
+write.csv(datos1,"NuevasPosiciones.csv",col.names=TRUE)
 
 ###########################################################################################################
 #
 #   Paso 2, Venta
 #
 ###########################################################################################################
+#Fondo
+fondo <- datos$Fondo
+
+#Contratos
+contratos <- datos1$Contrato
 
 #Tipo de operacion
 operacion <- rep("VTA-SI",length(contratos))
 
 #Serie de la venta
-serie1 <- gsub("'","",antserie)
+serie1 <- datos$SerieAnterior
 
 #Precio
 precios <- read.csv("Precios.csv",header = TRUE)
@@ -60,10 +97,10 @@ prices <- function(fund,ser){
 precio <- mapply(prices,fondo,serie1)
 
 #Tipo de valor
-tipo <- ifelse(fondo=="+CIEQUS",52,ifelse(fondo=="+CIBOLS",52,51))
+tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,51))
 
 #Títulos
-titulos <- as.character(archivo$Títulos)
+titulos <- as.character(datos$Titulos)
 
 #Importe de la operacion
 importe1 <- as.numeric(titulos)*precio
@@ -92,11 +129,9 @@ fcaptura <- format(Sys.Date(), "%d/%m/%Y")
 #### Creacion del documento txt
 zero <- as.character(integer(length(fondo)))
 documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie1,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
-documento <- documento[vender=="Vender"]
 #write.table(documento,"ventas.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "venta.txt")
-
 
 
 ###########################################################################################################
@@ -109,7 +144,7 @@ cat(paste(x, collapse = "\n"), file = "venta.txt")
 operacion <- rep("Compra Sociedades Inversio",length(contratos))
 
 #Serie
-serie2 <- newserie
+serie2 <- datos$SerieNueva
 
 #Precio
 precio <- mapply(prices,fondo,serie2)
@@ -123,7 +158,6 @@ importe <- as.character(precio*as.numeric(titulos))
 #### Creacion del documento txt
 zero <- as.character(integer(length(fondo)))
 documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie2,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
-documento <- documento[vender=="Vender"]
 #write.table(documento,"compra.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "compra.txt")
