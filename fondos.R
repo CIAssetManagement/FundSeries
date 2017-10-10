@@ -23,3 +23,13 @@ seriep <- function(monto){
   if(between(monto,montos[2],montos[1])){return(series[2])}
   if(monto < montos[2]){return(series[3])}
 }
+
+seriea <- function(monto){
+  #Series that investors can achieve
+  series <- c("F1","F3")
+  #Minimum money required per series
+  montos <- c(100000,9999999)
+  
+  if(monto <= montos[2]){return(series[1])}
+  if(monto > montos[2]){return(series[2])}
+}

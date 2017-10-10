@@ -17,9 +17,9 @@ archivo$Serie <- gsub("'","",archivo$Serie)
 ####################################################################################################
 
 #En caso de hacerse la reclasificación de CIBOLS y CIEQUS.
-#fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','CIEQUS','+CIBOLS')
+fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS')
 #En caso de no hacerse la reclasificación de CIBOLS y CIEQUS.
-fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD')
+#fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','AXESEDM')
 
 ####################################################################################################
 #                                 Data frame con las viejas series                                 #
@@ -40,16 +40,18 @@ datoscompra <- archivo %>%
   summarise(Titulos = sum(Títulos), Importe = sum(Importe))
 
 #Serie nueva 
-#Esto sirve en el caso que existan CIPLUS BF's
-#serie <- ifelse(datoscompra$Emisora == '+CIPLUS',
-#                sapply(datoscompra$Importe,seriep),
-#                sapply(datoscompra$Importe,serie))
 
-#Este es el caso sin CIPLUSes
-serie <- as.character(sapply(datoscompra$Importe,serie))
+#Esto sirve en el caso que existan CIPLUS BF's
+#serie <- as.character(sapply(datoscompra$Importe,seriep))
+
+#Esto sirve en el caso que existan AXESEDM
+#serie <- as.character(sapply(datoscompra$Importe,seriea))
+
+#Este es el caso sin CIPLUS y AXESEDM
+seriew <- as.character(sapply(datoscompra$Importe,serie))
 
 #Data frame completo
-datoscompra$Serie <- serie
+datoscompra$Serie <- seriew
 
 ####################################################################################################
 #                                         Reclasificacion                                          #
@@ -63,10 +65,14 @@ datos$Titulos.y <- NULL
 datos$Importe.y <- NULL
 colnames(datos) <- c('Contrato','Fondo','SerieAnterior','Titulos','Importe','SerieNueva','Accion a realizar')
 
+#Contratos a omitir
+omitir <- read_excel('contratos.xlsx')
+quitar <- array(match(omitir$Contrato,datos$Contrato))
+if(length(quitar) == 0){datos1 <- datos} else {datos1 <- datos[-quitar,]}
 #### Creación del documento csv
-datos1 <- datos
-datos1$Fondo <- paste0("'",datos1$Fondo)
-write.csv(datos1,"NuevasPosiciones.csv",col.names=TRUE)
+datos2 <- datos1
+datos2$Fondo <- paste0("'",datos1$Fondo)
+write.csv(datos2,"NuevasPosiciones.csv",col.names=TRUE)
 
 ###########################################################################################################
 #
@@ -74,7 +80,7 @@ write.csv(datos1,"NuevasPosiciones.csv",col.names=TRUE)
 #
 ###########################################################################################################
 #Fondo
-fondo <- datos$Fondo
+fondo <- datos1$Fondo
 
 #Contratos
 contratos <- datos1$Contrato
@@ -83,11 +89,14 @@ contratos <- datos1$Contrato
 operacion <- rep("VTA-SI",length(contratos))
 
 #Serie de la venta
-serie1 <- datos$SerieAnterior
+serie1 <- datos1$SerieAnterior
 
 #Precio
 precios <- read.csv("Precios.csv",header = TRUE)
 prices <- function(fund,ser){
+  #Caso AXESEDM
+  #names <- colnames(precios)
+  #Caso fondos CI
   names <- paste0("+",colnames(precios))
   vectorc <- match(fund,names)
   vectorr <- match(ser,precios[,1])
@@ -97,10 +106,10 @@ prices <- function(fund,ser){
 precio <- mapply(prices,fondo,serie1)
 
 #Tipo de valor
-tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,51))
+tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,ifelse(fondo == "AXESEDM",52,51)))
 
 #Títulos
-titulos <- as.character(datos$Titulos)
+titulos <- as.character(datos1$Titulos)
 
 #Importe de la operacion
 importe1 <- as.numeric(titulos)*precio
@@ -110,7 +119,7 @@ importe <- as.character(importe1)
 foperacion <- format(Sys.Date(), "%d/%m/%Y")
 
 #Fecha de liquidacion (en días)
-liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS"),c(0,0,2,2,2,3,3))
+liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS","AXESEDM"),c(0,0,2,2,2,2,2,3))
 liquidacion <- function(valor){
   vector <- match(valor,liq)
   fliq <- liq[vector,2]
@@ -144,7 +153,7 @@ cat(paste(x, collapse = "\n"), file = "venta.txt")
 operacion <- rep("Compra Sociedades Inversio",length(contratos))
 
 #Serie
-serie2 <- datos$SerieNueva
+serie2 <- datos1$SerieNueva
 
 #Precio
 precio <- mapply(prices,fondo,serie2)
