@@ -30,8 +30,8 @@ diainhabil <-  function(fecha){
 
 #En caso de hacerse la reclasificación de CIBOLS y CIEQUS.
 fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS')
-#En caso de no hacerse la reclasificación de CIBOLS y CIEQUS.
-#fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','AXESEDM')
+#En caso de hacerse la reclasificación de AXESEDM
+#fondos <- c('AXESEDM')
 
 ####################################################################################################
 #                                 Data frame con las viejas series                                 #
@@ -53,16 +53,16 @@ datoscompra <- archivo %>%
 
 #Serie nueva 
 
-#Esto sirve en el caso que existan CIPLUS BF's
-#serie <- as.character(sapply(datoscompra$Importe,seriep))
+#Esto sirve en el caso de reclasificar CIPLUS
+#seriew <- as.character(sapply(datoscompra$Importe,seriep))
+#datoscompra$Serie <- seriew
 
-#Esto sirve en el caso que existan AXESEDM
-#serie <- as.character(sapply(datoscompra$Importe,seriea))
+#Esto sirve en el caso de reclasificar AXESEDM
+#seriew <- as.character(sapply(datoscompra$Importe,seriea))
+#datoscompra$Serie <- seriew
 
 #Este es el caso sin CIPLUS y AXESEDM
 seriew <- as.character(sapply(datoscompra$Importe,serie))
-
-#Data frame completo
 datoscompra$Serie <- seriew
 
 ####################################################################################################
