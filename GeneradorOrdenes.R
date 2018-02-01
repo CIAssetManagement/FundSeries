@@ -4,11 +4,14 @@
 #
 ###########################################################################################################
 
+#Funciones
+source("fondos.R",local=FALSE)
+
 #Paquete
 library(readxl)
 library(dplyr)
+library(FundTools)
 #Directorio de trabajo
-setwd("C:/Github/FundSeries")
 archivo <- read_excel("OrdenPrueba.xls")
 archivo$Serie <- gsub("'","",archivo$Serie)
 
@@ -16,10 +19,10 @@ diainhabil <-  function(fecha){
   fechabase0 <- as.Date("2017-08-06")
   fechabase1 <- as.Date("2017-08-07")
   if(as.integer(fecha - fechabase0 ) %% 7 == 6){
-    fecha = fecha + 2 
+    fecha = fecha + 3 
   }
   if(as.integer(fecha - fechabase1 ) %% 7 == 6){
-    fecha = fecha + 1 
+    fecha = fecha + 2 
   }
   return(fecha)
 }
@@ -28,10 +31,15 @@ diainhabil <-  function(fecha){
 #                                      Fondos a Reclasificar                                       #
 ####################################################################################################
 
-#En caso de hacerse la reclasificación de CIBOLS y CIEQUS.
-fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS')
-#En caso de hacerse la reclasificación de AXESEDM
-#fondos <- c('AXESEDM')
+fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS','AXESEDM')
+fondosp <- c('51-+CIGUB-C-0','51-+CIGUB-C-1','51-+CIGUB-C-2','51-+CIGUB-C-3','51-+CIGUB-C-4','51-+CIGUB-BE-3',
+             '51-+CIGUB-BE-4','51-+CIGUMP-C-0','51-+CIGUMP-C-1','51-+CIGUMP-C-2','51-+CIGUMP-C-3','51-+CIGUMP-C-4',
+             '51-+CIGUMP-BE-3','51-+CIGUMP-BE-4','51-+CIGULP-C-0','51-+CIGULP-C-1','51-+CIGULP-C-2','51-+CIGULP-C-3',
+             '51-+CIGULP-C-4','51-+CIGULP-BE-3','51-+CIGULP-BE-4','51-+CIUSD-C-0','51-+CIUSD-C-1','51-+CIUSD-C-2',
+             '51-+CIUSD-C-3','51-+CIUSD-C-4','51-+CIUSD-BE-3','51-+CIUSD-BE-4','52-+CIEQUS-C-0','52-+CIEQUS-C-1',
+             '52-+CIEQUS-C-2','52-+CIEQUS-C-3','52-+CIEQUS-C-4','52-+CIEQUS-BE-3','52-+CIEQUS-BE-4','52-+CIBOLS-C-0',
+             '52-+CIBOLS-C-1','52-+CIBOLS-C-2','52-+CIBOLS-C-3','52-+CIBOLS-C-4','52-+CIBOLS-BE-3','52-+CIBOLS-BE-4',
+             '52-AXESEDM-F1','52-AXESEDM-F3','52-AXESEDM-M1','52-AXESEDM-M3')
 
 ####################################################################################################
 #                                 Data frame con las viejas series                                 #
@@ -53,16 +61,19 @@ datoscompra <- archivo %>%
 
 #Serie nueva 
 
-#Esto sirve en el caso de reclasificar CIPLUS
-#seriew <- as.character(sapply(datoscompra$Importe,seriep))
-#datoscompra$Serie <- seriew
-
-#Esto sirve en el caso de reclasificar AXESEDM
-#seriew <- as.character(sapply(datoscompra$Importe,seriea))
-#datoscompra$Serie <- seriew
-
-#Este es el caso sin CIPLUS y AXESEDM
-seriew <- as.character(sapply(datoscompra$Importe,serie))
+seriew <- c()
+for(i in seq(1,length(datoscompra$Importe),1)){
+  ind1 <- datosventa$CContrato == datoscompra$CContrato[i]
+  ind2 <- datosventa$Emisora == datoscompra$Emisora[i]
+  indices <- ifelse(ind1 == TRUE,ind2,ind1)
+  tipo <- datosventa$Serie[indices]
+  if(nchar(tipo) <= 2){
+    tipo <- substr(tipo,1,1)
+  } else {
+    tipo <- strsplit(tipo,"-")[[1]][1]
+  }
+  seriew <- c(seriew,serie(datoscompra$Importe[i],as.character(tipo)))
+}
 datoscompra$Serie <- seriew
 
 ####################################################################################################
@@ -103,22 +114,18 @@ operacion <- rep("VTA-SI",length(contratos))
 #Serie de la venta
 serie1 <- datos1$SerieAnterior
 
-#Precio
-precios <- read.csv("Precios.csv",header = TRUE)
-prices <- function(fund,ser){
-  #Caso AXESEDM
-  #names <- colnames(precios)
-  #Caso fondos CI
-  names <- paste0("+",colnames(precios))
-  vectorc <- match(fund,names)
-  vectorr <- match(ser,precios[,1])
-  price <- precios[vectorr,vectorc]
-  return(as.numeric(price))
-}
-precio <- mapply(prices,fondo,serie1)
-
 #Tipo de valor
 tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,ifelse(fondo == "AXESEDM",52,51)))
+
+#Precio
+precios <- get_prices(Sys.Date()-1,fondosp)
+prices <- function(tipo,fund,serie){
+  namesp <- colnames(precios)
+  namesf <- paste0(tipo,"-",fund,"-",serie)
+  price <- precios[1,which(namesp == namesf)]
+  return(as.numeric(price))
+}
+precio <- mapply(prices,tipo,fondo,serie1)
 
 #Títulos
 titulos <- as.character(datos1$Titulos)
@@ -168,7 +175,7 @@ operacion <- rep("Compra Sociedades Inversio",length(contratos))
 serie2 <- datos1$SerieNueva
 
 #Precio
-precio <- mapply(prices,fondo,serie2)
+precio <- mapply(prices,tipo,fondo,serie2)
 
 #Títulos
 titulos <- as.character(importe1%/%precio)
@@ -182,4 +189,3 @@ documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie2,"|",tipo,"
 #write.table(documento,"compra.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
 cat(paste(x, collapse = "\n"), file = "compra.txt")
-
