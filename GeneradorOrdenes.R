@@ -7,10 +7,11 @@
 #Funciones
 source("fondos.R",local=FALSE)
 
-#Paquete
+#Paquetes
 library(readxl)
 library(dplyr)
 library(FundTools)
+
 #Directorio de trabajo
 archivo <- read_excel("OrdenPrueba.xls")
 archivo$Serie <- gsub("'","",archivo$Serie)
@@ -32,14 +33,6 @@ diainhabil <-  function(fecha){
 ####################################################################################################
 
 fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS','AXESEDM')
-fondosp <- c('51-+CIGUB-C-0','51-+CIGUB-C-1','51-+CIGUB-C-2','51-+CIGUB-C-3','51-+CIGUB-C-4','51-+CIGUB-BE-3',
-             '51-+CIGUB-BE-4','51-+CIGUMP-C-0','51-+CIGUMP-C-1','51-+CIGUMP-C-2','51-+CIGUMP-C-3','51-+CIGUMP-C-4',
-             '51-+CIGUMP-BE-3','51-+CIGUMP-BE-4','51-+CIGULP-C-0','51-+CIGULP-C-1','51-+CIGULP-C-2','51-+CIGULP-C-3',
-             '51-+CIGULP-C-4','51-+CIGULP-BE-3','51-+CIGULP-BE-4','51-+CIUSD-C-0','51-+CIUSD-C-1','51-+CIUSD-C-2',
-             '51-+CIUSD-C-3','51-+CIUSD-C-4','51-+CIUSD-BE-3','51-+CIUSD-BE-4','52-+CIEQUS-C-0','52-+CIEQUS-C-1',
-             '52-+CIEQUS-C-2','52-+CIEQUS-C-3','52-+CIEQUS-C-4','52-+CIEQUS-BE-3','52-+CIEQUS-BE-4','52-+CIBOLS-C-0',
-             '52-+CIBOLS-C-1','52-+CIBOLS-C-2','52-+CIBOLS-C-3','52-+CIBOLS-C-4','52-+CIBOLS-BE-3','52-+CIBOLS-BE-4',
-             '52-AXESEDM-F1','52-AXESEDM-F3','52-AXESEDM-M1','52-AXESEDM-M3')
 
 ####################################################################################################
 #                                 Data frame con las viejas series                                 #
@@ -118,11 +111,18 @@ serie1 <- datos1$SerieAnterior
 tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,ifelse(fondo == "AXESEDM",52,51)))
 
 #Precio
-precios <- get_prices(Sys.Date()-1,fondosp)
+precios <- read_excel("Precios.xls")
+final <- length(precios$X__1)
+precios <- data.frame(precios[4:final,1],precios[4:final,2],precios[4:final,3])
+colnames(precios) <- c('Emisora','Serie','Precio')
+preciost <- ifelse(precios$Emisora =="+CIEQUS",52,ifelse(precios$Emisora =="+CIBOLS",52,
+                                                         ifelse(precios$Emisora == "AXESEDM",52,51)))
+precios$id <- paste0(preciost,"-",precios$Emisora,"-",precios$Serie)
+
 prices <- function(tipo,fund,serie){
-  namesp <- colnames(precios)
+  namesp <- precios$id
   namesf <- paste0(tipo,"-",fund,"-",serie)
-  price <- precios[1,which(namesp == namesf)]
+  price <- precios$Precio[which(namesp == namesf)]
   return(as.numeric(price))
 }
 precio <- mapply(prices,tipo,fondo,serie1)
