@@ -34,6 +34,7 @@ vignettes/*.pdf
 
 #Local files
 OrdenPrueba.xls
+Precios.xls
 NuevasPosiciones.csv
 file.txt
 .Rproj.user
