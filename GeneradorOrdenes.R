@@ -5,6 +5,7 @@
 ###########################################################################################################
 
 #Funciones
+options(scipen=999)
 source("fondos.R",local=FALSE)
 
 #Paquetes
@@ -54,7 +55,7 @@ datoscompra <- archivo %>%
 
 #Serie nueva 
 
-seriew <- c()
+serie_nueva <- c()
 for(i in seq(1,length(datoscompra$Importe),1)){
   ind1 <- datosventa$CContrato == datoscompra$CContrato[i]
   ind2 <- datosventa$Emisora == datoscompra$Emisora[i]
@@ -65,9 +66,9 @@ for(i in seq(1,length(datoscompra$Importe),1)){
   } else {
     tipo <- strsplit(tipo,"-")[[1]][1]
   }
-  seriew <- c(seriew,serie(datoscompra$Importe[i],as.character(tipo)))
+  serie_nueva <- c(serie_nueva,serie(datoscompra$Importe[i],as.character(tipo)))
 }
-datoscompra$Serie <- seriew
+datoscompra$Serie <- serie_nueva
 
 ####################################################################################################
 #                                         Reclasificacion                                          #
@@ -84,40 +85,44 @@ colnames(datos) <- c('Contrato','Fondo','SerieAnterior','Titulos','Importe','Ser
 #Contratos a omitir
 omitir <- read_excel('contratos.xlsx')
 quitar <- array(match(omitir$Contrato,datos$Contrato))
-if(length(quitar) == 0){datos1 <- datos} else {datos1 <- datos[-quitar,]}
+if(length(quitar) == 0){datos_no_omitidos <- datos} else {datos_no_omitidos <- datos[-quitar,]}
 #### Creación del documento csv
-datos2 <- datos1
-datos2$Fondo <- paste0("'",datos1$Fondo)
-write.csv(datos2,"NuevasPosiciones.csv",col.names=TRUE)
+datos_finales <- datos_no_omitidos
+datos_finales$Fondo <- paste0("'",datos_no_omitidos$Fondo)
+write.csv(datos_finales,"NuevasPosiciones.csv",col.names=TRUE)
 
 ###########################################################################################################
 #
-#   Paso 2, Venta
+#   Paso 2, Compra - Venta de Renta fija
 #
 ###########################################################################################################
+#Renta Fija
+datos_rentafija <- datos_no_omitidos[datos_no_omitidos$Fondo %in% c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIPLUS'),]
+
 #Fondo
-fondo <- datos1$Fondo
+fondo_venta <- datos_rentafija$Fondo
 
 #Contratos
-contratos <- datos1$Contrato
+contratos_venta <- datos_rentafija$Contrato
 
 #Tipo de operacion
-operacion <- rep("VTA-SI",length(contratos))
+operacion_venta <- rep("VTA-SI",length(contratos_venta))
 
 #Serie de la venta
-serie1 <- datos1$SerieAnterior
+serie_venta <- datos_rentafija$SerieAnterior
 
 #Tipo de valor
-tipo <- ifelse(fondo =="+CIEQUS",52,ifelse(fondo =="+CIBOLS",52,ifelse(fondo == "AXESEDM",52,51)))
+tipo_valor_venta <- ifelse(fondo_venta =="+CIEQUS",52,
+                           ifelse(fondo_venta =="+CIBOLS",52,
+                                  ifelse(fondo_venta == "AXESEDM",52,51)))
 
 #Precio
 precios <- read_excel("Precios.xls")
-final <- length(precios$X__1)
-precios <- data.frame(precios[4:final,1],precios[4:final,2],precios[4:final,3])
-colnames(precios) <- c('Emisora','Serie','Precio')
-preciost <- ifelse(precios$Emisora =="+CIEQUS",52,ifelse(precios$Emisora =="+CIBOLS",52,
-                                                         ifelse(precios$Emisora == "AXESEDM",52,51)))
-precios$id <- paste0(preciost,"-",precios$Emisora,"-",precios$Serie)
+precios <- data.frame(Emisora=precios$Sociedad,Serie=precios$Clase,Precio=precios$`Precio Contable`)
+tipo_valor_precios <- ifelse(precios$Emisora =="+CIEQUS",52,
+                             ifelse(precios$Emisora =="+CIBOLS",52,
+                                    ifelse(precios$Emisora == "AXESEDM",52,51)))
+precios$id <- paste0(tipo_valor_precios,"-",precios$Emisora,"-",precios$Serie)
 
 prices <- function(tipo,fund,serie){
   namesp <- precios$id
@@ -125,17 +130,18 @@ prices <- function(tipo,fund,serie){
   price <- precios$Precio[which(namesp == namesf)]
   return(as.numeric(price))
 }
-precio <- mapply(prices,tipo,fondo,serie1)
+precio_venta <- mapply(prices,tipo_valor_venta,fondo_venta,serie_venta)
 
 #Títulos
-titulos <- as.character(datos1$Titulos)
+titulos_venta <- as.character(datos_rentafija$Titulos)
 
 #Importe de la operacion
-importe1 <- as.numeric(titulos)*precio
-importe <- as.character(importe1)
+importe_ventacompra <- as.numeric(titulos_venta)*precio_venta
+importe_venta <- as.character(importe_ventacompra)
 
 #Fecha de Operacion
-foperacion <- format(Sys.Date(), "%d/%m/%Y")
+fecha_operacion <- format(Sys.Date(), "%d/%m/%Y")
+foperacion <- rep(fecha_operacion,length(operacion_venta))
 
 #Fecha de liquidacion (en días)
 liq <- cbind(c("+CIGUB","+CIPLUS","+CIGUMP","+CIGULP","+CIUSD","+CIEQUS","+CIBOLS","AXESEDM"),c(0,0,2,2,2,2,2,3))
@@ -148,44 +154,124 @@ liquidacion <- function(valor){
   fliquidacion <- format(fechas,"%d/%m/%Y")
   return(fliquidacion)
 }
-fliquidacion <- liquidacion(fondo)
+fecha_liquidacion <- liquidacion(fondo_venta)
+fliquidacion <- rep(fecha_liquidacion,2)
 
 #Fecha de Captura
 #numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
-fcaptura <- format(Sys.Date(), "%d/%m/%Y")
+fecha_captura <- format(Sys.Date(), "%d/%m/%Y")
+fcaptura <- rep(fecha_captura,length(operacion_venta))
 
-#### Creacion del documento txt
-zero <- as.character(integer(length(fondo)))
-documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie1,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
-#write.table(documento,"ventas.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
-x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
-cat(paste(x, collapse = "\n"), file = "venta.txt")
-
-
-###########################################################################################################
-#
-#   Paso 3, Compra
-#
-###########################################################################################################
+#### Compra
 
 #Tipo de operacion
-operacion <- rep("Compra Sociedades Inversio",length(contratos))
+operacion_compra <- rep("Compra Sociedades Inversio",length(contratos_venta))
 
 #Serie
-serie2 <- datos1$SerieNueva
+serie_compra <- datos_rentafija$SerieNueva
 
 #Precio
-precio <- mapply(prices,tipo,fondo,serie2)
+precio_compra <- mapply(prices,tipo_valor_venta,fondo_venta,serie_compra)
 
 #Títulos
-titulos <- as.character(importe1%/%precio)
+titulos_compra <- as.character(importe_ventacompra%/%precio_compra)
 
 #Importe
-importe <- as.character(precio*as.numeric(titulos))
+importe_compra <- as.character(precio_compra*as.numeric(titulos_compra))
 
 #### Creacion del documento txt
+operacion <- c(operacion_venta,operacion_compra)
+contratos <- rep(contratos_venta,2)
+fondo <- rep(fondo_venta,2)
+serie <- c(serie_venta,serie_compra)
+tipo <- rep(tipo_valor_venta,2)
+titulos <- c(titulos_venta,titulos_compra)
+precio <- c(precio_venta,precio_compra)
+importe <- c(importe_venta,importe_compra)
+
 zero <- as.character(integer(length(fondo)))
-documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie2,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
-#write.table(documento,"compra.txt",quote = FALSE,row.names=FALSE,col.names=FALSE)
+documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
 x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
-cat(paste(x, collapse = "\n"), file = "compra.txt")
+cat(paste(x, collapse = "\n"), file = "RentaFija.txt")
+
+
+###########################################################################################################
+#
+#   Paso 3, Compra - Venta de Renta Variable
+#
+###########################################################################################################
+
+#Renta Variable
+datos_rentavariable <- datos_no_omitidos[datos_no_omitidos$Fondo %in% c('AXESEDM','+CIBOLS','+CIEQUS'),]
+
+#Fondo
+fondo_venta <- datos_rentavariable$Fondo
+
+#Contratos
+contratos_venta <- datos_rentavariable$Contrato
+
+#Tipo de operacion
+operacion_venta <- rep("VTA-SI",length(contratos_venta))
+
+#Serie de la venta
+serie_venta <- datos_rentavariable$SerieAnterior
+
+#Tipo de valor
+tipo_valor_venta <- ifelse(fondo_venta =="+CIEQUS",52,
+                           ifelse(fondo_venta =="+CIBOLS",52,
+                                  ifelse(fondo_venta == "AXESEDM",52,51)))
+
+#Precio
+precio_venta <- mapply(prices,tipo_valor_venta,fondo_venta,serie_venta)
+
+#Títulos
+titulos_venta <- as.character(datos_rentavariable$Titulos)
+
+#Importe de la operacion
+importe_ventacompra <- as.numeric(titulos_venta)*precio_venta
+importe_venta <- as.character(importe_ventacompra)
+
+#Fecha de Operacion
+fecha_operacion <- format(Sys.Date(), "%d/%m/%Y")
+foperacion <- rep(fecha_operacion,length(operacion_venta))
+
+#Fecha de liquidacion (en días)
+fecha_liquidacion <- liquidacion(fondo_venta)
+fliquidacion <- rep(fecha_liquidacion,2)
+
+#Fecha de Captura
+#numero <- ifelse(fondo=="+CIGUB",0,ifelse(fondo=="+CIPLUS",0,-1))
+fecha_captura <- format(Sys.Date(), "%d/%m/%Y")
+fcaptura <- rep(fecha_captura,length(operacion_venta))
+
+#### Compra
+
+#Tipo de operacion
+operacion_compra <- rep("Compra Sociedades Inversio",length(contratos_venta))
+
+#Serie
+serie_compra <- datos_rentavariable$SerieNueva
+
+#Precio
+precio_compra <- mapply(prices,tipo_valor_venta,fondo_venta,serie_compra)
+
+#Títulos
+titulos_compra <- as.character(importe_ventacompra%/%precio_compra)
+
+#Importe
+importe_compra <- as.character(precio_compra*as.numeric(titulos_compra))
+
+#### Creacion del documento txt
+operacion <- c(operacion_venta,operacion_compra)
+contratos <- rep(contratos_venta,2)
+fondo <- rep(fondo_venta,2)
+serie <- c(serie_venta,serie_compra)
+tipo <- rep(tipo_valor_venta,2)
+titulos <- c(titulos_venta,titulos_compra)
+precio <- c(precio_venta,precio_compra)
+importe <- c(importe_venta,importe_compra)
+
+zero <- as.character(integer(length(fondo)))
+documento <- c("",paste0(operacion,"|",contratos,"|",fondo,"|",serie,"|",tipo,"|",titulos,"|",precio,"|",zero,"|",zero,"|",zero,"|",zero,"|",zero,"|",importe,"|",fliquidacion,"|",zero,"|",fcaptura,"|",zero,"|",zero,"|",importe,"|",foperacion,"|",precio,"|",zero))
+x <- capture.output(write.table(documento, row.names = FALSE, col.names = FALSE, quote = FALSE))
+cat(paste(x, collapse = "\n"), file = "RentaVariable.txt")
