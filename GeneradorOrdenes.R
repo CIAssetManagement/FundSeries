@@ -33,14 +33,15 @@ diainhabil <-  function(fecha){
 #                                      Fondos a Reclasificar                                       #
 ####################################################################################################
 
-fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS','AXESEDM')
+#fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD','+CIEQUS','+CIBOLS','AXESEDM')
+fondos <- c('+CIGUB','+CIGUMP','+CIGULP','+CIUSD')
 
 ####################################################################################################
 #                                 Data frame con las viejas series                                 #
 ####################################################################################################
 
 datosventa <- archivo %>%
-  filter(Emisora %in% fondos & Importe > 0 & Serie != 'BE-0') %>%
+  filter(Emisora %in% fondos & CContrato != 22285 & Importe > 0 & Serie != 'BE-0') %>%
   group_by(CContrato, Emisora, Serie) %>%
   summarise(Titulos = sum(Títulos), Importe = sum(Importe))
 
@@ -49,7 +50,7 @@ datosventa <- archivo %>%
 ####################################################################################################
 
 datoscompra <- archivo %>% 
-  filter(Emisora %in% fondos & Importe > 0 & Serie != 'BE-0') %>%
+  filter(Emisora %in% fondos & CContrato != 22285  & Importe > 0 & Serie != 'BE-0') %>%
   group_by(CContrato, Emisora) %>%
   summarise(Titulos = sum(Títulos), Importe = sum(Importe))
 
@@ -117,7 +118,7 @@ tipo_valor_venta <- ifelse(fondo_venta =="+CIEQUS",52,
                                   ifelse(fondo_venta == "AXESEDM",52,51)))
 
 #Precio
-precios <- read_excel("Precios.xls")
+precios <- read_excel("Precios.xls",skip = 3)
 precios <- data.frame(Emisora=precios$Sociedad,Serie=precios$Clase,Precio=precios$`Precio Contable`)
 tipo_valor_precios <- ifelse(precios$Emisora =="+CIEQUS",52,
                              ifelse(precios$Emisora =="+CIBOLS",52,
